@@ -730,7 +730,7 @@ SND_PCM_PLUGIN_DEFINE_FUNC(volumiofifo)
 		goto error;
 	}
 
-	volumio->fifo_in_fd = open(volumio->fifo_name, O_NONBLOCK | O_RDONLY);
+	volumio->fifo_in_fd = open(volumio->fifo_name, O_NONBLOCK | O_RDONLY | O_CLOEXEC);
 
 	if(volumio->fifo_in_fd < 0) {
 		SNDERR("Failed to open output fifo %s", volumio->fifo_name);
@@ -738,7 +738,7 @@ SND_PCM_PLUGIN_DEFINE_FUNC(volumiofifo)
 		goto error;
 	}
 
-	volumio->fifo_out_fd = open(volumio->fifo_name, O_NONBLOCK | O_WRONLY);
+	volumio->fifo_out_fd = open(volumio->fifo_name, O_NONBLOCK | O_WRONLY | O_CLOEXEC);
 
 	if(volumio->fifo_out_fd < 0) {
 		SNDERR("Failed to open output fifo %s", volumio->fifo_name);
@@ -746,7 +746,7 @@ SND_PCM_PLUGIN_DEFINE_FUNC(volumiofifo)
 		goto error;
 	}
 
-	volumio->timer_fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
+	volumio->timer_fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
 
 	if(volumio->timer_fd < 0) {
 		SNDERR("Failed to create timer fd");
