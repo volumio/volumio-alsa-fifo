@@ -362,6 +362,22 @@ static void snd_pcm_volumiofifo_close_fd(int *fd) {
 }
 
 /* Called outside lock */
+static int snd_pcm_volumiofifo_free(snd_pcm_ioplug_t *io)
+{
+	snd_pcm_volumiofifo_t *volumio = io->private_data;
+
+	if(volumio->debug)
+		SNDERR("PCM %s free called, releasing FIFO %s. State is %s",
+				snd_pcm_name(io->pcm), volumio->fifo_name, snd_pcm_state_name(io->state));
+
+	snd_pcm_volumiofifo_close_fd(&volumio->fifo_out_fd);
+	snd_pcm_volumiofifo_close_fd(&volumio->fifo_in_fd);
+	snd_pcm_volumiofifo_close_fd(&volumio->timer_fd);
+
+	return 0;
+}
+
+/* Called outside lock */
 static int snd_pcm_volumiofifo_close(snd_pcm_ioplug_t *io)
 {
 	snd_pcm_volumiofifo_t *volumio = io->private_data;
@@ -542,6 +558,7 @@ static const snd_pcm_ioplug_callback_t volumiofifo_playback_callback = {
 	.transfer = snd_pcm_volumiofifo_transfer,
 	.stop = snd_pcm_volumiofifo_stop,
 	.pointer = snd_pcm_volumiofifo_pointer,
+	.hw_free = snd_pcm_volumiofifo_free,
 	.close = snd_pcm_volumiofifo_close,
 	.poll_descriptors_count = snd_pcm_volumiofifo_poll_descriptors_count,
 	.poll_descriptors = snd_pcm_volumiofifo_poll_descriptors,
@@ -730,7 +747,7 @@ SND_PCM_PLUGIN_DEFINE_FUNC(volumiofifo)
 		goto error;
 	}
 
-	volumio->fifo_in_fd = open(volumio->fifo_name, O_NONBLOCK | O_RDONLY);
+	volumio->fifo_in_fd = open(volumio->fifo_name, O_NONBLOCK | O_RDONLY | O_CLOEXEC);
 
 	if(volumio->fifo_in_fd < 0) {
 		SNDERR("Failed to open output fifo %s", volumio->fifo_name);
@@ -738,7 +755,7 @@ SND_PCM_PLUGIN_DEFINE_FUNC(volumiofifo)
 		goto error;
 	}
 
-	volumio->fifo_out_fd = open(volumio->fifo_name, O_NONBLOCK | O_WRONLY);
+	volumio->fifo_out_fd = open(volumio->fifo_name, O_NONBLOCK | O_WRONLY | O_CLOEXEC);
 
 	if(volumio->fifo_out_fd < 0) {
 		SNDERR("Failed to open output fifo %s", volumio->fifo_name);
@@ -746,7 +763,7 @@ SND_PCM_PLUGIN_DEFINE_FUNC(volumiofifo)
 		goto error;
 	}
 
-	volumio->timer_fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
+	volumio->timer_fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
 
 	if(volumio->timer_fd < 0) {
 		SNDERR("Failed to create timer fd");
